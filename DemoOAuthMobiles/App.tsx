@@ -24,6 +24,11 @@ function App(): React.JSX.Element {
       await Linking.openURL(reqUrl);
   }, [urlBase]);
 
+      // Listen to incoming links from deep linking
+  Linking.addEventListener('url', ({ url }) => {
+    console.log("URL received: ", url);
+  });
+
   return (
     <View style={styles.mainContainer}>
       <Button onPress={handlePress} title='Log In'/>
