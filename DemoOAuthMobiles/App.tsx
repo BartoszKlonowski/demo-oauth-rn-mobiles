@@ -58,6 +58,22 @@ function App(): React.JSX.Element {
     });
   }, [token]);
 
+  const handleAPIFetch = useCallback(() => {
+    fetch("https://api.github.com/user", {
+      method: 'GET',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+        "Authorization": `token ${accessToken}`
+      },
+    }).then(response => {
+      console.log(response);
+      response.json().then(res => {
+        console.log("Final API response is: ", JSON.stringify(res));
+      });
+    });
+  }, [accessToken, token]);
+
       // Listen to incoming links from deep linking
   Linking.addEventListener('url', ({ url }) => {
     console.log("URL received: ", url);
@@ -74,6 +90,7 @@ function App(): React.JSX.Element {
         <Text>{accessToken}</Text>
       </View>
       {token ? <Button onPress={handlePost} title='Continue' /> : null}
+      {accessToken ? <Button onPress={handleAPIFetch} title='Fetch API' /> : null}
     </View>
   );
 }
