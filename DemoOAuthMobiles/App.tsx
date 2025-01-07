@@ -1,14 +1,17 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   Linking,
   StyleSheet,
+  Text,
   View,
 } from 'react-native';
 import { Button } from './components/Button';
 
 function App(): React.JSX.Element {
+  const [token, setToken] = useState("");
   const urlBase = "https://github.com/login/oauth/authorize";
   const requestParams = {
+    redirect_uri: "DemoOAuthMobiles://code",
   }
 
   const handlePress = useCallback(async () => {
@@ -27,20 +30,28 @@ function App(): React.JSX.Element {
       // Listen to incoming links from deep linking
   Linking.addEventListener('url', ({ url }) => {
     console.log("URL received: ", url);
+    setToken(url.split("?")[1].split("=")[1]);
   });
 
   return (
     <View style={styles.mainContainer}>
       <Button onPress={handlePress} title='Log In'/>
+      <View style={styles.tokenResultContainer}><Text>Token is:</Text><Text>{token}</Text></View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  tokenResultContainer: {
+    alignItems: "center",
+    padding: 15,
+    height: 250,
+    width: 250
+  },
   mainContainer: {
     flex: 1,
     alignItems: "center",
-    justifyContent: "center"
+    justifyContent: "space-around"
   }
 });
 
