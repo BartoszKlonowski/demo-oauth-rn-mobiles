@@ -1,25 +1,32 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   Linking,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
-import { Button } from './components/Button';
+import { Button } from '../components/Button';
+import { GithubAccount } from '../Content';
+import { useNavigation } from '@react-navigation/native';
+import { NavigationParams } from '../navigation';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
-const client_secret = "placeholder";
-const client_id = "placeholder";
+const client_secret = "";
+const client_id = "";
 
-function App(): React.JSX.Element {
+const Login = (): React.JSX.Element => {
   const [token, setToken] = useState("");
   const [accessToken, setAccessToken] = useState("");
+  const [profile, setProfile] = useState<GithubAccount>();
   const urlBase = "https://github.com/login/oauth/authorize";
+
+  const navigation = useNavigation<NativeStackNavigationProp<NavigationParams>>();
   const requestParams = {
     client_id: client_id,
     redirect_uri: "DemoOAuthMobiles://code",
   }
 
-  const handlePress = useCallback(async () => {
+  const handleAuthorization = useCallback(async () => {
       const keys = Object.keys(requestParams);
       const vals = Object.values(requestParams);
       let reqParams = "";
@@ -28,11 +35,10 @@ function App(): React.JSX.Element {
         reqParams += `${keys[i]}=${vals[i]}`;
       }
       const reqUrl = urlBase + `?${reqParams}`;
-      console.log("requesting: ", reqUrl);
       await Linking.openURL(reqUrl);
   }, [urlBase]);
 
-  const handlePost = useCallback(() => {
+  const requestAccess = useCallback((token: string) => {
     fetch('https://github.com/login/oauth/access_token', {
       method: 'POST',
       headers: {
@@ -48,15 +54,14 @@ function App(): React.JSX.Element {
       }),
     }).then((response) => {
       response.json().then(res => {
-        console.log("The response is: ", JSON.stringify(res));
         setAccessToken(res.access_token);
       }).catch(error => {
-        console.log("cant open response, error: ", error);
+        console.log("cant open response - parsing error: ", error);
       });
     }).catch(error => {
-      console.log("The error is: ", error);
+      console.log("Access token fetching error: ", error);
     });
-  }, [token]);
+  }, []);
 
   const handleAPIFetch = useCallback(() => {
     fetch("https://api.github.com/user", {
@@ -67,30 +72,43 @@ function App(): React.JSX.Element {
         "Authorization": `token ${accessToken}`
       },
     }).then(response => {
-      console.log(response);
       response.json().then(res => {
-        console.log("Final API response is: ", JSON.stringify(res));
+        setProfile(res);
       });
     });
   }, [accessToken, token]);
 
-      // Listen to incoming links from deep linking
-  Linking.addEventListener('url', ({ url }) => {
-    console.log("URL received: ", url);
-    setToken(url.split("?")[1].split("=")[1]);
-  });
+  useEffect(() => {
+    Linking.addEventListener('url', ({ url }) => {
+      const temporaryToken = url.split("?")[1].split("=")[1];
+      setToken(temporaryToken);
+      requestAccess(temporaryToken);
+    });
+    return () => {
+      Linking.removeAllListeners('url');
+    }
+  }, [setToken, requestAccess]);
+
+  useEffect(() => {
+    if (token && accessToken) {
+      handleAPIFetch();
+    }
+  }, [token, accessToken]);
+
 
   return (
     <View style={styles.mainContainer}>
-      <Button onPress={handlePress} title='Log In'/>
+      <Button onPress={handleAuthorization} title='Authorize'/>
       <View style={styles.tokenResultContainer}>
         <Text>Token is:</Text>
         <Text>{token}</Text>
         <Text>Access token is:</Text>
         <Text>{accessToken}</Text>
       </View>
-      {token ? <Button onPress={handlePost} title='Continue' /> : null}
-      {accessToken ? <Button onPress={handleAPIFetch} title='Fetch API' /> : null}
+      {token && accessToken && profile ? <Button onPress={() => {
+          handleAPIFetch();
+          navigation.navigate('Profile', profile);
+        }} title="Log in" /> : null}
     </View>
   );
 }
@@ -100,7 +118,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: 15,
     height: 250,
-    width: 250
+    width: 550
   },
   mainContainer: {
     flex: 1,
@@ -109,4 +127,4 @@ const styles = StyleSheet.create({
   }
 });
 
-export default App;
+export default Login;
